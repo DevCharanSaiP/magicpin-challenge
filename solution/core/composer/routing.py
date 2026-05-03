@@ -8,12 +8,13 @@ from core.models import TickRequest, TickResponse, TickAction, ReplyRequest, Rep
 from .templates import dentists, restaurants
 
 
+
 def _load_contexts(trigger_id: str) -> Optional[Dict[str, Any]]:
     trig_ctx = store.triggers.get(trigger_id)
     if not trig_ctx:
         return None
-    t = trig_ctx.payload
 
+    t = trig_ctx.payload
     m_ctx = store.merchants.get(t["merchant_id"])
     if not m_ctx:
         return None
@@ -44,15 +45,25 @@ def compose_for_trigger(req: TickRequest) -> TickResponse:
             continue
 
         cat_slug = ctxs["category"]["slug"]
-        result: Dict[str, Any]
+        kind = ctxs["trigger"]["kind"]
 
-        # Simple dispatch: handle dentists specially, others generic for now
+        result: Optional[Dict[str, Any]] = None
+
         if cat_slug == "dentists":
-            result = dentists.compose(ctxs["category"], ctxs["merchant"], ctxs["trigger"], ctxs["customer"])
+            result = dentists.compose(
+                ctxs["category"], ctxs["merchant"], ctxs["trigger"], ctxs["customer"]
+            )
         elif cat_slug == "restaurants":
-            result = restaurants.compose(ctxs["category"], ctxs["merchant"], ctxs["trigger"], ctxs["customer"])
+            result = restaurants.compose(
+                ctxs["category"], ctxs["merchant"], ctxs["trigger"], ctxs["customer"]
+            )
         else:
-            result = dentists.compose_generic(ctxs["category"], ctxs["merchant"], ctxs["trigger"], ctxs["customer"])
+            # For now: no message for categories we haven't modelled yet.
+            result = None
+
+        if not result:
+            # Strict routing: if we don't understand this trigger, we stay quiet.
+            continue
 
         conv_id = f"conv_{ctxs['merchant']['merchant_id']}_{trig_id}"
         store.conversations[conv_id] = {

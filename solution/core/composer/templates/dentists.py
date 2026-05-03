@@ -50,43 +50,61 @@ def compose_perf_dip(category: Dict[str, Any],
                      merchant: Dict[str, Any],
                      trigger: Dict[str, Any],
                      customer: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Handle perf_dip on calls/views, framed as a concrete growth nudge.
-    """
     owner = _owner_name(merchant)
     payload = trigger["payload"]
-    metric = payload["metric"]          # e.g. "calls"
+    metric = payload["metric"]          # "calls" or "views"
     delta_pct = payload["delta_pct"]   # e.g. -0.50
     window = payload["window"]         # "7d"
     baseline = payload.get("vs_baseline")
 
     perf = merchant["performance"]
-    calls = perf.get("calls")
     views = perf.get("views")
+    calls = perf.get("calls")
     ctr = perf.get("ctr")
 
-    metric_human = "phone calls" if metric == "calls" else metric
+    peer_stats = category.get("peer_stats", {})
+    peer_ctr = peer_stats.get("avg_ctr")
+
+    signals = merchant.get("signals", [])
+    active_offers = [o for o in merchant.get("offers", []) if o.get("status") == "active"]
+    cleaning_offer = next(
+        (o for o in active_offers if "Cleaning" in o["title"]), active_offers[0] if active_offers else None
+    )
+
+    metric_label = "phone calls" if metric == "calls" else metric
     drop_pct = int(abs(delta_pct) * 100)
 
+    peer_line = ""
+    if peer_ctr is not None:
+        peer_line = f" peers ~{peer_ctr*100:.1f}% CTR ke aas-paas hain."
+
+    signal_line = ""
+    if "ctr_below_peer_median" in signals:
+        signal_line = " Aapki CTR already peer median se neeche flag hui hai."
+
+    offer_text = cleaning_offer["title"] if cleaning_offer else "Dental Cleaning @ ₹299 type offer"
+
     body = (
-        f"Dr. {owner}, last {window} mein aapke {metric_human} ~{drop_pct}% neeche gaye hain "
-        f"(baseline ~{baseline} tha). Abhi 30d numbers: {views} views, {calls} calls, CTR {ctr:.1%}.\n\n"
-        "Sabse fast fix: ek simple \"Dental Cleaning @ ₹299\" type offer ko Google Business Profile post "
-        "aur WhatsApp dono par 7 din ke liye chala dete hain.\n\n"
-        "Kya main aapke liye ye 7-day cleaning campaign draft kar doon?"
+        f"Dr. {owner}, last {window} mein aapke {metric_label} ~{drop_pct}% neeche gaye hain "
+        f"(baseline ~{baseline} tha). Abhi 30d numbers: {views} views, {calls} calls, CTR {ctr*100:.1f}%."
+        f"{peer_line}{signal_line}\n\n"
+        f"Sabse fast fix: aapka \"{offer_text}\" ko Google Business Profile post + "
+        "WhatsApp dono par next 7 din ke liye highlight kar dete hain.\n\n"
+        "Kya main ye 7-day campaign draft kar doon jo aapke high-intent search wale patients ko target kare?"
     )
-    cta = "Reply YES to launch the 7-day cleaning campaign draft"
+
+    cta = "Reply YES to draft the 7-day recovery campaign"
 
     return {
         "body": body,
         "cta": cta,
         "send_as": "vera",
         "suppression_key": _build_suppression(trigger, category["slug"]),
-        "template_name": "dentist_perf_dip_v1",
+        "template_name": "dentist_perf_dip_v2",
         "template_params": [],
         "rationale": (
-            "Trigger=perf_dip on calls; combining drop %, baseline and current 30d stats to recommend a "
-            "7-day cleaning offer campaign as the lowest-friction fix."
+            "Trigger=perf_dip on calls; using drop %, baseline, current 30d metrics, peer CTR and signals to "
+            "propose a concrete 7-day campaign around the merchant's active cleaning offer."
         ),
     }
 
@@ -143,35 +161,11 @@ def compose_recall_due_customer(category: Dict[str, Any],
 def compose_generic(category: Dict[str, Any],
                     merchant: Dict[str, Any],
                     trigger: Dict[str, Any],
-                    customer: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    owner = _owner_name(merchant)
-    perf = merchant.get("performance", {})
-    views = perf.get("views")
-    calls = perf.get("calls")
-    ctr = perf.get("ctr")
+                    customer: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    return None
 
-    body = (
-        f"Dr. {owner}, last 30 din mein aapke profile numbers: {views} views, {calls} calls, "
-        f"CTR {ctr:.1%}. Chaho to main ek simple 1-page summary bana sakta hoon "
-        "jisme views, calls aur peer-comparison clearly dikhunga."
-    )
-    cta = "Reply YES for the 1-page performance summary"
-
-    return {
-        "body": body,
-        "cta": cta,
-        "send_as": "vera" if trigger["scope"] == "merchant" else "merchant_on_behalf",
-        "suppression_key": _build_suppression(trigger, category["slug"]),
-        "template_name": "generic_summary_v1",
-        "template_params": [],
-        "rationale": "Generic dentist nudge when no specialised handler; offers low-friction performance summary.",
-    }
-
-
-def compose(category: Dict[str, Any],
-            merchant: Dict[str, Any],
-            trigger: Dict[str, Any],
-            customer: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    
+def compose(category, merchant, trigger, customer) -> Optional[Dict[str, Any]]:
     kind = trigger["kind"]
     scope = trigger["scope"]
 
@@ -184,6 +178,5 @@ def compose(category: Dict[str, Any],
     if kind == "recall_due" and scope == "customer" and customer is not None:
         return compose_recall_due_customer(category, merchant, trigger, customer)
 
-    # TODO: handle renewal_due, review_theme_emerged, etc.
-
+    # Unknown trigger for dentists → stay silent
     return compose_generic(category, merchant, trigger, customer)

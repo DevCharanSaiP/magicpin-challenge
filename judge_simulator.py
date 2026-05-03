@@ -36,7 +36,7 @@ LLM_MODEL = "gemini-flash-latest"  # <-- Optional: specify model or leave empty 
 OLLAMA_URL = "http://localhost:11434"
 
 # Which test to run by default
-TEST_SCENARIO = "full_evaluation"  # options: warmup, phase2_short, auto_reply_hell, intent_transition, hostile, all, full_evaluation
+TEST_SCENARIO = "warmup"  # options: warmup, phase2_short, auto_reply_hell, intent_transition, hostile, all, full_evaluation
 
 # =============================================================================
 # ██████  END OF CONFIGURATION - DON'T EDIT BELOW THIS LINE ██████
