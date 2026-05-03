@@ -1,6 +1,6 @@
 # magicpin-vera-bot
 
-An HTTP service implementing a merchant AI assistant compatible with the **magicpin AI Challenge** specification. The service consumes structured category, merchant, trigger, and customer contexts and produces WhatsApp-ready messages that help merchants run better marketing and customer communication workflows. [file:16][file:19]
+An HTTP service implementing a merchant AI assistant compatible with the **magicpin AI Challenge** specification. The service consumes structured category, merchant, trigger, and customer contexts and produces WhatsApp-ready messages that help merchants run better marketing and customer communication workflows.
 
 ---
 
@@ -13,12 +13,12 @@ This repository contains:
   - `GET  /v1/metadata`
   - `POST /v1/context`
   - `POST /v1/tick`
-  - `POST /v1/reply` [file:19]
+  - `POST /v1/reply`
 - A rule-based, deterministic “composer” that:
   - Interprets the 4-context framework defined in the challenge brief.
   - Chooses when to send a message for an active trigger.
   - Constructs messages that are specific, category-appropriate, and action-oriented.
-- Local tooling (`judge_simulator.py`) to run the same test harness the organisers use. [file:17]
+- Local tooling (`judge_simulator.py`) to run the same test harness the organisers use.
 
 The service is currently deployed at:
 
@@ -34,7 +34,7 @@ The system is deliberately simple and deterministic:
 
 - The HTTP layer is implemented in FastAPI and Uvicorn.
 - Contexts are stored in memory for the duration of a test run.
-- Composition is handled by a set of category-specific template modules selected by `category.slug` and `trigger.kind`. [file:16][file:23]
+- Composition is handled by a set of category-specific template modules selected by `category.slug` and `trigger.kind`. 
 - Multi-turn behaviour (auto-reply detection, hostile exits, intent transition) is implemented in a small reply handler.
 
 LLMs are used only in the external judge harness (not in this service) to score outputs. The service itself does not call any external LLM APIs during composition.
@@ -47,7 +47,7 @@ Key directories and files:
   FastAPI application, endpoint definitions, and wiring into the core modules.
 
 - `solution/core/models.py`  
-  Pydantic models matching the request/response shapes for `v1/context`, `v1/tick`, `v1/reply`, together with the internal `StoredContext` model. [file:19]
+  Pydantic models matching the request/response shapes for `v1/context`, `v1/tick`, `v1/reply`, together with the internal `StoredContext` model.
 
 - `solution/core/store.py`  
   In-memory data store:
@@ -63,19 +63,19 @@ Key directories and files:
   - Implements `/v1/reply` behaviour including:
     - Auto-reply detection.
     - Hostile “stop messaging me” exits.
-    - Intent transition when a merchant says “Ok, let’s do it. What’s next?”. [file:21]
+    - Intent transition when a merchant says “Ok, let’s do it. What’s next?”. 
 
 - `solution/core/composer/templates/`  
   Category-specific composition logic, for example:
   - `dentists.py` for research digests, performance dips, and recall reminders.
   - `restaurants.py` for IPL match-day decisions and performance nudges.
-  Additional modules for salons, gyms, and pharmacies can be added here. [file:22][file:23]
+  Additional modules for salons, gyms, and pharmacies can be added here. 
 
 ---
 
 ## 3. Composition Strategy
 
-The composer operates on the four contexts defined in the challenge brief: `CategoryContext`, `MerchantContext`, `TriggerContext`, and `CustomerContext`. [file:16]
+The composer operates on the four contexts defined in the challenge brief: `CategoryContext`, `MerchantContext`, `TriggerContext`, and `CustomerContext`.
 
 ### 3.1 Trigger-driven routing
 
@@ -87,18 +87,18 @@ For each `v1/tick` call:
    - Dentists:
      - `research_digest` → research update with source-cited anchor and patient-education CTA.
      - `perf_dip` → 7-day offer campaign targeting a measurable performance dip.
-     - `recall_due` → customer-facing recall reminder with slots. [file:23][file:22]
+     - `recall_due` → customer-facing recall reminder with slots.
    - Restaurants:
-     - `ipl_match_today` → guidance on whether to run a match-night promo (weekday vs Saturday) and how to position existing offers. [file:23][file:22]
+     - `ipl_match_today` → guidance on whether to run a match-night promo (weekday vs Saturday) and how to position existing offers.
 
-If there is no specialised handler for a given `(category, kind)` combination, the service opts not to send anything for that trigger. This “strict routing” design matches the brief’s guidance that restraint is preferable to generic low-value messaging. [file:19]
+If there is no specialised handler for a given `(category, kind)` combination, the service opts not to send anything for that trigger. This “strict routing” design matches the brief’s guidance that restraint is preferable to generic low-value messaging. 
 
 ### 3.2 Message characteristics
 
 For each supported trigger, the templates aim to ensure:
 
 - **Specificity**  
-  Messages refer to concrete, verifiable facts: number of views, calls, CTR, recall dates, batch IDs, match details, etc., always taken from the contexts, never invented. [file:16][file:22]
+  Messages refer to concrete, verifiable facts: number of views, calls, CTR, recall dates, batch IDs, match details, etc., always taken from the contexts, never invented. 
 
 - **Category fit**  
   Tone and vocabulary match the vertical:
@@ -109,7 +109,7 @@ For each supported trigger, the templates aim to ensure:
   Messages reference the merchant’s own:
   - Offers (`MerchantContext.offers`).
   - Signals (e.g., `ctr_below_peer_median`).
-  - Performance metrics and location where relevant. [file:21]
+  - Performance metrics and location where relevant.
 
 - **Trigger relevance and decision quality**  
   Every message answers “why now?” based on the trigger, and usually proposes one concrete next action (e.g. 7-day campaign, IPL special, recall slot hold).
@@ -123,7 +123,7 @@ For each supported trigger, the templates aim to ensure:
 
 ## 4. Multi-turn Behaviour
 
-The `/v1/reply` endpoint implements a small but robust state machine aligned with the challenge replay scenarios. [file:19][file:21]
+The `/v1/reply` endpoint implements a small but robust state machine aligned with the challenge replay scenarios.
 
 It handles:
 
@@ -168,7 +168,7 @@ The OpenAPI UI will be available at `http://localhost:8080/docs`.
 
 ## 6. Judge Simulator
 
-The repository includes `judge_simulator.py`, which mirrors the magicpin judge harness for local testing. [file:17]
+The repository includes `judge_simulator.py`, which mirrors the magicpin judge harness for local testing.
 
 Basic usage:
 
@@ -209,18 +209,18 @@ The service is deployed as a Render web service with:
   uvicorn app.main:app --host 0.0.0.0 --port $PORT
   ```
 
-`$PORT` is provided by Render at runtime; the service binds to `0.0.0.0` so it is reachable externally. [web:59][web:63]
+`$PORT` is provided by Render at runtime; the service binds to `0.0.0.0` so it is reachable externally. 
 
 ---
 
 ## 8. Limitations and Future Work
 
-- Category coverage is deepest for dentists and restaurants; salons, gyms, and pharmacies can be extended with additional trigger-specific handlers (for example, bridal follow-up for salons, seasonal acquisition dips and member winbacks for gyms, compliance alerts and chronic refills for pharmacies). [file:22]
+- Category coverage is deepest for dentists and restaurants; salons, gyms, and pharmacies can be extended with additional trigger-specific handlers (for example, bridal follow-up for salons, seasonal acquisition dips and member winbacks for gyms, compliance alerts and chronic refills for pharmacies).
 - The current composer is fully rule-based and deterministic; it can be augmented with LLM-backed prompting while preserving the strict routing and validation layers.
 
 ---
 
 ## 9. License and Usage Notes
 
-- The dataset and challenge briefs are owned by magicpin and are provided for challenge purposes only. [file:16]
+- The dataset and challenge briefs are owned by magicpin and are provided for challenge purposes only.
 - Code in this repository is intended to be used for experimentation, evaluation, and as a reference implementation of the challenge HTTP contract.
